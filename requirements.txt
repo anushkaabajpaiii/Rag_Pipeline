@@ -1,0 +1,8 @@
+pymupdf==1.23.14
+chromadb==0.4.22
+sentence-transformers==2.2.2
+ollama==0.1.7
+numpy==1.24.3
+nltk==3.8.1
+torch>=2.0.0
+transformers>=4.21.0
