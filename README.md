@@ -1,119 +1,298 @@
-# Simple Local RAG Tutorial
+# RAG Pipeline - Complete Setup Guide
 
-Local RAG pipeline we're going to build:
+A production-ready Retrieval-Augmented Generation (RAG) pipeline for PDF documents with semantic search, hybrid retrieval, and local LLM integration.
 
-All the way from PDF ingestion to "chat with PDF" style features.
+## 🚀 Features
 
-All using open-source tools.
+- **PDF Processing**: Extract text while preserving document structure
+- **Semantic Chunking**: Intelligent text splitting with metadata preservation
+- **Hybrid Retrieval**: Combines semantic similarity + keyword matching
+- **Local LLM Integration**: Uses Ollama for answer generation
+- **Modern UI**: React + Tailwind CSS interface
+- **Structured Responses**: JSON output with source references
+- **Robust Error Handling**: Handles edge cases and malformed PDFs
 
-## Getting Started 
+## 📋 Prerequisites
 
-## Setup
+1. **Python 3.8+**
+2. **Node.js 16+** (for frontend)
+3. **Ollama** (for local LLM)
 
-Note: Tested in Python 3.11, running on Windows 11.
+## 🛠️ Installation
 
+### 1. Backend Setup
 
-### Create environment
+```bash
+# Create virtual environment
+python -m venv rag_env
+source rag_env/bin/activate  # On Windows: rag_env\Scripts\activate
 
-```
-python -m venv venv
-```
-
-### Activate environment
-
-Linux/macOS:
-```
-source venv/bin/activate
-```
-
-Windows: 
-```
-.\venv\Scripts\activate
-```
-
-### Install requirements
-
-```
+# Install dependencies
 pip install -r requirements.txt
+
+# Create necessary directories
+mkdir uploads chroma_db
 ```
 
+### 2. Install and Configure Ollama
 
+```bash
+# Install Ollama (visit https://ollama.ai for platform-specific instructions)
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Pull a model (choose one)
+ollama pull llama2        # 7B model (recommended)
+ollama pull mistral       # Alternative
+ollama pull codellama     # For code-related documents
+
+# Start Ollama server
+ollama serve
 ```
 
-## What is RAG?
+### 3. Frontend Setup
 
-RAG stands for Retrieval Augmented Generation.
+The frontend is included as a React component artifact. To run it locally:
 
-It was introduced in the paper [*Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks*]
+```bash
+# Create React app
+npx create-react-app rag-frontend
+cd rag-frontend
 
-Each step can be roughly broken down to:
+# Install additional dependencies
+npm install lucide-react
 
-* **Retrieval** - Seeking relevant information from a source given a query. For example, getting relevant passages of Wikipedia text from a database given a question.
-* **Augmented** - Using the relevant retrieved information to modify an input to a generative model (e.g. an LLM).
-* **Generation** - Generating an output given an input. For example, in the case of an LLM, generating a passage of text given an input prompt.
+# Replace src/App.js with the React component from the artifact
+# Make sure to update the API_BASE URL if needed
+```
 
-## Why RAG?
+## 🚀 Running the Application
 
-The main goal of RAG is to improve the generation outptus of LLMs.
+### 1. Start the Backend
 
-Two primary improvements can be seen as:
-1. **Preventing hallucinations** - LLMs are incredible but they are prone to potential hallucination, as in, generating something that *looks* correct but isn't. RAG pipelines can help LLMs generate more factual outputs by providing them with factual (retrieved) inputs. And even if the generated answer from a RAG pipeline doesn't seem correct, because of retrieval, you also have access to the sources where it came from.
-2. **Work with custom data** - Many base LLMs are trained with internet-scale text data. This means they have a great ability to model language, however, they often lack specific knowledge. RAG systems can provide LLMs with domain-specific data such as medical information or company documentation and thus customized their outputs to suit specific use cases.
+```bash
+# Activate virtual environment
+source rag_env/bin/activate
 
-The authors of the original RAG paper mentioned above outlined these two points in their discussion.
+# Run FastAPI server
+python main.py
+```
 
-> This work offers several positive societal benefits over previous work: the fact that it is more
-strongly grounded in real factual knowledge (in this case Wikipedia) makes it “hallucinate” less
-with generations that are more factual, and offers more control and interpretability. RAG could be
-employed in a wide variety of scenarios with direct benefit to society, for example by endowing it
-with a medical index and asking it open-domain questions on that topic, or by helping people be more
-effective at their jobs.
+The API will be available at `http://localhost:8000`
 
-RAG can also be a much quicker solution to implement than fine-tuning an LLM on specific data. 
+### 2. Start the Frontend
 
+```bash
+# In the frontend directory
+npm start
+```
 
-## What kind of problems can RAG be used for?
+The frontend will be available at `http://localhost:3000`
 
-RAG can help anywhere there is a specific set of information that an LLM may not have in its training data (e.g. anything not publicly accessible on the internet).
+### 3. Start Ollama (if not already running)
 
-For example you could use RAG for:
-* **Customer support Q&A chat** - By treating your existing customer support documentation as a resource, when a customer asks a question, you could have a system retrieve relevant documentation snippets and then have an LLM craft those snippets into an answer. Think of this as a "chatbot for your documentation". Klarna, a large financial company, [uses a system like this](https://www.klarna.com/international/press/klarna-ai-assistant-handles-two-thirds-of-customer-service-chats-in-its-first-month/) to save $40M per year on customer support costs.
-* **Email chain analysis** - Let's say you're an insurance company with long threads of emails between customers and insurance agents. Instead of searching through each individual email, you could retrieve relevant passages and have an LLM create strucutred outputs of insurance claims.
-* **Company internal documentation chat** - If you've worked at a large company, you know how hard it can be to get an answer sometimes. Why not let a RAG system index your company information and have an LLM answer questions you may have? The benefit of RAG is that you will have references to resources to learn more if the LLM answer doesn't suffice.
-* **Textbook Q&A** - Let's say you're studying for your exams and constantly flicking through a large textbook looking for answers to your quesitons. RAG can help provide answers as well as references to learn more.
+```bash
+ollama serve
+```
 
-All of these have the common theme of retrieving relevant resources and then presenting them in an understandable way using an LLM.
+## 📡 API Endpoints
 
-From this angle, you can consider an LLM a calculator for words.
+### Upload PDF
+```http
+POST /upload_pdf
+Content-Type: multipart/form-data
 
-## Why local?
+Body: PDF file
+```
 
-Privacy, speed, cost.
+### Ask Question
+```http
+POST /ask_question
+Content-Type: application/json
 
-Running locally means you use your own hardware.
+{
+  "question": "What is the main topic of this document?",
+  "pdf_id": "optional-pdf-id",
+  "max_chunks": 5
+}
+```
 
-From a privacy standpoint, this means you don't have send potentially sensitive data to an API.
+### Health Check
+```http
+GET /health
+```
 
-From a speed standpoint, it means you won't necessarily have to wait for an API queue or downtime, if your hardware is running, the pipeline can run.
+### Get Statistics
+```http
+GET /stats
+```
 
-And from a cost standpoint, running on your own hardware often has a heavier starting cost but little to no costs after that.
+## 🔧 Configuration
 
-Performance wise, LLM APIs may still perform better than an open-source model running locally on general tasks but there are more and more examples appearing of smaller, focused models outperforming larger models. 
+Edit the `Config` class in `main.py` to customize:
 
-## Key terms
+```python
+class Config:
+    UPLOAD_DIR = "uploads"
+    CHROMA_DB_PATH = "./chroma_db"
+    EMBEDDING_MODEL = "all-MiniLM-L6-v2"  # Change embedding model
+    OLLAMA_BASE_URL = "http://localhost:11434"
+    OLLAMA_MODEL = "llama2"  # Change LLM model
+    CHUNK_SIZE = 512
+    CHUNK_OVERLAP = 50
+    MAX_RETRIEVAL_CHUNKS = 5
+```
 
-| Term | Description |
-| ----- | ----- | 
-| **Token** | A sub-word piece of text. For example, "hello, world!" could be split into ["hello", ",", "world", "!"]. A token can be a whole word,<br> part of a word or group of punctuation characters. 1 token ~= 4 characters in English, 100 tokens ~= 75 words.<br> Text gets broken into tokens before being passed to an LLM. |
-| **Embedding** | A learned numerical representation of a piece of data. For example, a sentence of text could be represented by a vector with<br> 768 values. Similar pieces of text (in meaning) will ideally have similar values. |
-| **Embedding model** | A model designed to accept input data and output a numerical representation. For example, a text embedding model may take in 384 <br>tokens of text and turn it into a vector of size 768. An embedding model can and often is different to an LLM model. |
-| **Similarity search/vector search** | Similarity search/vector search aims to find two vectors which are close together in high-demensional space. For example, <br>two pieces of similar text passed through an embedding model should have a high similarity score, whereas two pieces of text about<br> different topics will have a lower similarity score. Common similarity score measures are dot product and cosine similarity. |
-| **Large Language Model (LLM)** | A model which has been trained to numerically represent the patterns in text. A generative LLM will continue a sequence when given a sequence. <br>For example, given a sequence of the text "hello, world!", a genertive LLM may produce "we're going to build a RAG pipeline today!".<br> This generation will be highly dependant on the training data and prompt. |
-| **LLM context window** | The number of tokens a LLM can accept as input. For example, as of March 2024, GPT-4 has a default context window of 32k tokens<br> (about 96 pages of text) but can go up to 128k if needed. A recent open-source LLM from Google, Gemma (March 2024) has a context<br> window of 8,192 tokens (about 24 pages of text). A higher context window means an LLM can accept more relevant information<br> to assist with a query. For example, in a RAG pipeline, if a model has a larger context window, it can accept more reference items<br> from the retrieval system to aid with its generation. |
-| **Prompt** | A common term for describing the input to a generative LLM. The idea of "[prompt engineering](https://en.wikipedia.org/wiki/Prompt_engineering)" is to structure a text-based<br> (or potentially image-based as well) input to a generative LLM in a specific way so that the generated output is ideal. This technique is<br> possible because of a LLMs capacity for in-context learning, as in, it is able to use its representation of language to breakdown <br>the prompt and recognize what a suitable output may be (note: the output of LLMs is probable, so terms like "may output" are used). | 
+## 📊 Response Format
 
+The system returns structured JSON responses:
 
+```json
+{
+  "answer": "The document discusses...",
+  "source_chunks": [
+    {
+      "chunk_id": "uuid_page_1_chunk_0",
+      "page_number": 1,
+      "chapter_title": "Introduction",
+      "section_title": "Overview",
+      "content": "This document provides...",
+      "relevance_score": 0.892
+    }
+  ]
+}
+```
 
+## 🎯 Usage Examples
 
+### Query Types Supported
 
+1. **Specific Page Questions**
+   - "What's on page 5?"
+   - "Summarize page 3"
 
+2. **Conceptual Questions**
+   - "What is the main argument?"
+   - "How does X relate to Y?"
+
+3. **Factual Queries**
+   - "What are the key findings?"
+   - "List the recommendations"
+
+4. **Comparison Questions**
+   - "Compare approach A vs B"
+   - "What are the differences between X and Y?"
+
+## 🔍 How It Works
+
+1. **PDF Upload**: Extract text while preserving structure (chapters, sections, pages)
+2. **Semantic Chunking**: Split text into meaningful chunks with metadata
+3. **Embedding**: Convert chunks to vector representations using Sentence Transformers
+4. **Storage**: Store in ChromaDB for fast semantic search
+5. **Hybrid Retrieval**: Combine semantic similarity + TF-IDF keyword matching
+6. **LLM Generation**: Send context to Ollama for answer generation
+7. **Response**: Return structured JSON with sources
+
+## 🛡️ Error Handling
+
+The system handles:
+- Malformed PDFs
+- Multi-column layouts
+- Missing table of contents
+- Empty pages
+- Network errors
+- LLM service downtime
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+1. **Ollama Connection Error**
+   - Ensure Ollama is running: `ollama serve`
+   - Check model is pulled: `ollama list`
+
+2. **PDF Processing Errors**
+   - Verify PDF is not corrupted
+   - Check file permissions
+
+3. **Memory Issues**
+   - Reduce `CHUNK_SIZE` in config
+   - Use smaller embedding model
+
+4. **Slow Performance**
+   - Reduce `MAX_RETRIEVAL_CHUNKS`
+   - Use faster embedding model
+   - Optimize chunk size
+
+## 📈 Performance Optimization
+
+1. **Embedding Model**: Use smaller models for speed
+2. **Chunk Size**: Balance between context and performance
+3. **Retrieval Count**: Limit chunks for faster responses
+4. **Caching**: ChromaDB provides built-in caching
+
+## 🚀 Production Deployment
+
+### Docker Deployment
+
+```dockerfile
+FROM python:3.9-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+EXPOSE 8000
+
+CMD ["python", "main.py"]
+```
+
+### Environment Variables
+
+```bash
+export OLLAMA_BASE_URL=http://ollama-service:11434
+export CHROMA_DB_PATH=/data/chroma_db
+export UPLOAD_DIR=/data/uploads
+```
+
+## 🧪 Testing
+
+```bash
+# Test health endpoint
+curl http://localhost:8000/health
+
+# Test PDF upload
+curl -X POST -F "file=@sample.pdf" http://localhost:8000/upload_pdf
+
+# Test question answering
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"question": "What is this document about?"}' \
+  http://localhost:8000/ask_question
+```
+
+## 📚 Dependencies
+
+- **FastAPI**: Web framework
+- **PyMuPDF**: PDF processing
+- **ChromaDB**: Vector database
+- **Sentence Transformers**: Embeddings
+- **Scikit-learn**: TF-IDF vectorization
+- **Ollama**: Local LLM inference
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create feature branch
+3. Add tests for new features
+4. Submit pull request
+
+## 📄 License
+
+MIT License - see LICENSE file for details
+
+## 🔗 Resources
+
+- [Ollama Documentation](https://ollama.ai/docs)
+- [ChromaDB Documentation](https://docs.trychroma.com)
+- [Sentence Transformers](https://www.sbert.net)
+- [FastAPI Documentation](https://fastapi.tiangolo.com)
